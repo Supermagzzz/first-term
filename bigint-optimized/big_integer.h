@@ -4,12 +4,24 @@
 #include <cstddef>
 #include <gmp.h>
 #include <iosfwd>
+#include <utility>
+#include <vector>
+
+struct buffer {
+    size_t ref_counter;
+    std::vector<unsigned int> num;
+    explicit buffer(std::vector<unsigned int> num) {
+        this->ref_counter = 1;
+        this->num = std::move(num);
+    }
+};
 
 struct big_integer
 {
     big_integer();
     big_integer(big_integer const& other);
     big_integer(int a);
+    big_integer(unsigned int a);
     explicit big_integer(std::string const& str);
     ~big_integer();
 
@@ -48,7 +60,15 @@ struct big_integer
     friend std::string to_string(big_integer const& a);
 
 private:
-    mpz_t mpz;
+    bool small_int;
+    bool sign;
+    union {
+        buffer* data{};
+        unsigned int num;
+    };
+    void normalize();
+    void check_ref_count();
+    big_integer check_sizes(big_integer rhs);
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
