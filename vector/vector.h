@@ -81,14 +81,14 @@ vector<T>::vector(vector const& other) {
     if (other.capacity_ == 0) {
         data_ = nullptr;
     } else {
-        buffer = static_cast<T *>(operator new(other.capacity_ * sizeof(T)));
+        buffer = static_cast<T *>(operator new(other.size_ * sizeof(T)));
         for (int i = 0; i < other.size_; i++) {
             new(buffer + i) T(other.data_[i]);
         }
         data_ = buffer;
     }
     size_ = other.size_;
-    capacity_ = other.capacity_;
+    capacity_ = other.size_;
     buffer = nullptr;
     cntBuffer = 0;
 }
