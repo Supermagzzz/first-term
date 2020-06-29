@@ -155,9 +155,10 @@ big_integer& big_integer::operator/=(big_integer const& rhs) {
     res.num.resize(n - m + 1);
     for (size_t i = m, j = res.num.size() - 1; i <= n; ++i, --j) {
         uint128_t x = ((uint128_t) a.num.back() << 2 * SHIFT) +
-                      ((uint64_t) a.num[a.num.size() - 2] << SHIFT) +
-                      a.num[a.num.size() - 3];
-        uint64_t y = ((uint64_t) b.num.back() << SHIFT) + b.num[b.num.size() - 2];
+                (a.num.size() >= 2 ? ((uint64_t) a.num[a.num.size() - 2] << SHIFT) : 0U) +
+                (a.num.size() >= 3 ? a.num[a.num.size() - 3] : 0U);
+        uint64_t y = ((uint64_t) b.num.back() << SHIFT) +
+                (b.num.size() >= 2 ? b.num[b.num.size() - 2] : 0U);
         uint32_t cur = x / y;
         big_integer t = b * cur;
         bool bad = false;
