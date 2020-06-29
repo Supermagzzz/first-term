@@ -318,7 +318,7 @@ typename vector<T>::iterator vector<T>::erase(iterator first, iterator last) {
 template <typename T>
 typename vector<T>::iterator vector<T>::erase(const_iterator first, const_iterator last) {
 #ifdef _GLIBCXX_DEBUG
-    assert(data_ <= first && last < data_ + size_);
+    assert(data_ <= first && last <= data_ + size_);
 #endif
     if (last <= first) {
         return data_;
