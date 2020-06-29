@@ -301,7 +301,7 @@ typename vector<T>::iterator vector<T>::erase(const_iterator pos) {
 template <typename T>
 typename vector<T>::iterator vector<T>::erase(iterator first, iterator last) {
     assert(first < last);
-    assert(begin() <= first && last < end());
+    assert(begin() <= first && last <= end());
     size_t cnt = last - first;
     size_t j = first - begin();
     for (size_t i = j; i + cnt < size_; i++) {
