@@ -299,7 +299,7 @@ typename vector<T>::iterator vector<T>::erase(iterator pos) {
 template <typename T>
 typename vector<T>::iterator vector<T>::erase(const_iterator pos) {
 #ifdef _GLIBCXX_DEBUG
-    assert(pos >= data_ && pos < data_ + size);
+    assert(pos >= data_ && pos < data_ + size_);
 #endif
     std::ptrdiff_t delta = pos - data_;
     for (int i = delta; i + 1 < size_; i++) {
