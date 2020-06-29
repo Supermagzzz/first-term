@@ -78,19 +78,25 @@ vector<T>::vector() {
 
 template <typename T>
 vector<T>::vector(vector const& other) {
-    if (other.capacity_ == 0) {
-        data_ = nullptr;
-    } else {
+    cntBuffer = 0;
+    data_ = nullptr;
+    if (other.capacity_ != 0) {
         buffer = static_cast<T *>(operator new(other.size_ * sizeof(T)));
-        for (int i = 0; i < other.size_; i++) {
-            new(buffer + i) T(other.data_[i]);
+        try {
+            for (int i = 0; i < other.size_; i++) {
+                new(buffer + i) T(other.data_[i]);
+                cntBuffer++;
+            }
+        } catch (...) {
+            clear_buffer();
+            throw ;
         }
-        data_ = buffer;
+        std::swap(data_, buffer);
+        cntBuffer = 0;
     }
     size_ = other.size_;
     capacity_ = other.size_;
     buffer = nullptr;
-    cntBuffer = 0;
 }
 
 template <typename T>
@@ -204,7 +210,7 @@ template <typename T>
 void vector<T>::shrink_to_fit() {
     if (capacity_ != size_) {
         if (size_ == 0) {
-            delete data_;
+            operator delete(data_);
             data_ = nullptr;
         } else {
             buffer = static_cast<T *>(operator new(size_ * sizeof(T)));
@@ -336,11 +342,10 @@ void vector<T>::push_back_realloc(const T & x) {
 
 template <typename T>
 void vector<T>::clear_buffer() {
-    if (cntBuffer) {
-        while (cntBuffer) {
-            cntBuffer--;
-            buffer[cntBuffer].~T();
-        }
-        operator delete (buffer);
+    while (cntBuffer) {
+        cntBuffer--;
+        buffer[cntBuffer].~T();
     }
+    operator delete(buffer);
+    buffer = nullptr;
 }
