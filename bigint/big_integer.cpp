@@ -3,22 +3,35 @@
 #include <cstring>
 #include <stdexcept>
 #include <algorithm>
+#include <cstdint>
+
+__extension__ typedef unsigned __int128 uint128_t;
+
+static const uint32_t SHIFT = 32;
+static const uint32_t HALF_SHIFT = SHIFT / 2;
+static const uint32_t HALF_BITS = (1ULL << 16ULL) - 1;
 
 big_integer::big_integer() : num({0}), sign(false) {}
-big_integer::big_integer(big_integer const& other) : num(other.num), sign(other.sign) {}
+big_integer::big_integer(big_integer const& other) :
+        num(other.num),
+        sign(other.sign) {}
 big_integer& big_integer::operator=(big_integer const& other) = default;
 big_integer::~big_integer() = default;
-big_integer::big_integer(int a) : num({static_cast<unsigned int>(std::abs(a))}), sign(a < 0) {}
-big_integer::big_integer(unsigned int a) : num({a}), sign(false) {}
+big_integer::big_integer(int a) :
+        num({static_cast<uint32_t>(std::abs(1ll * a))}),
+        sign(a < 0) {}
+big_integer::big_integer(uint32_t a) :
+        num({a}),
+        sign(false) {}
 
-int addInt(unsigned int &a, unsigned int b) {
-    unsigned int c = a;
+int addInt(uint32_t &a, uint32_t b) {
+    uint32_t c = a;
     a += b;
     return b != 0 && a <= c;
 }
 
-int subInt(unsigned int &a, unsigned int b) {
-    unsigned int c = a;
+int subInt(uint32_t &a, uint32_t b) {
+    uint32_t c = a;
     a -= b;
     return b != 0 && a >= c;
 }
@@ -32,14 +45,14 @@ void big_integer::normalize() {
     }
 }
 
-std::pair<unsigned int, unsigned int> mul(unsigned int n, unsigned int m) {
-    unsigned int a = n >> 16U, b = n & ((1U << 16U) - 1U),
-            c = m >> 16U, d = m & ((1U << 16U) - 1U);
-    unsigned int top = a * c, bot = b * d, bc = b * c, ad = a * d;
-    a = (bc >> 16U);
-    b = (bc & ((1U << 16U) - 1U)) << 16U;
-    c = (ad >> 16U);
-    d = (ad & ((1U << 16U) - 1U)) << 16U;
+std::pair<uint32_t, uint32_t> mul(uint32_t n, uint32_t m) {
+    uint32_t a = n >> HALF_SHIFT, b = n & HALF_BITS,
+            c = m >> HALF_SHIFT, d = m & HALF_BITS;
+    uint32_t top = a * c, bot = b * d, bc = b * c, ad = a * d;
+    a = (bc >> HALF_SHIFT);
+    b = (bc & HALF_BITS) << HALF_SHIFT;
+    c = (ad >> HALF_SHIFT);
+    d = (ad & HALF_BITS) << HALF_SHIFT;
     top += a + c;
     if (bot + b < bot) {
         top++;
@@ -111,13 +124,13 @@ big_integer& big_integer::operator*=(big_integer const& rhs) {
     res.num.resize(num.size() + rhs.num.size() + 1);
     res.sign = sign != rhs.sign;
     for (size_t i = 0; i < num.size(); i++) {
-        unsigned int carry = 0;
+        uint32_t carry = 0;
         for (size_t j = 0; j < rhs.num.size() || carry; j++) {
             if (j == rhs.num.size()) {
                 res.num[i + j] = carry;
                 break;
             }
-            std::pair<unsigned int, unsigned int> p = mul(num[i], rhs.num[j]);
+            std::pair<uint32_t, uint32_t> p = mul(num[i], rhs.num[j]);
             p.first += addInt(p.second, carry);
             carry = p.first;
             carry += addInt(res.num[i + j], p.second);
@@ -134,32 +147,47 @@ big_integer& big_integer::operator/=(big_integer const& rhs) {
     }
     big_integer a = *this;
     big_integer b = rhs;
+    bool new_sign = a.sign ^ b.sign;
     a.sign = b.sign = false;
-    big_integer result, current;
-    result.num.resize(num.size());
-    for (int i = (int)num.size() - 1; i >= 0; i--) {
-        current <<= 32;
-        current += a.num[i];
-        unsigned int x = 0, l = 0, r = UINT32_MAX;
-        while (l <= r) {
-            unsigned int m = l / 2 + r / 2 + (r % 2 + l % 2) / 2;
-            big_integer tmp = b * m;
-            if (tmp <= current) {
-                x = m;
-                l = m + 1;
-            } else {
-                r = m - 1;
+    big_integer res;
+    a.num.push_back(0);
+    size_t n = a.num.size(), m = b.num.size() + 1;
+    res.num.resize(n - m + 1);
+    for (size_t i = m, j = res.num.size() - 1; i <= n; ++i, --j) {
+        uint128_t x = ((uint128_t) a.num.back() << 2 * SHIFT) +
+                      ((uint64_t) a.num[a.num.size() - 2] << SHIFT) +
+                      a.num[a.num.size() - 3];
+        uint64_t y = ((uint64_t) b.num.back() << SHIFT) + b.num[b.num.size() - 2];
+        uint32_t cur = x / y;
+        big_integer t = b * cur;
+        bool bad = false;
+        for (size_t i = 1; i <= a.num.size(); i++) {
+            if (a.num[a.num.size() - i] != (m - i < t.num.size() ? t.num[m - i] : 0)) {
+                bad = a.num[a.num.size() - i] < (m - i < t.num.size() ? t.num[m - i] : 0);
+                break;
             }
         }
-        result <<= 32;
-        result += x;
-        current = current - b * x;
+        if (bad) {
+            cur--;
+            t -= b;
+        }
+        res.num[j] = cur;
+        bool carry = false;
+        for (size_t i = 0; i < m; ++i) {
+            int64_t c = (int64_t) a.num[a.num.size() - m + i] -
+                        (i < t.num.size() ? t.num[i] : 0) -
+                        carry;
+            carry = c < 0;
+            a.num[a.num.size() - m + i] = c;
+        }
+        if (!a.num.back()) {
+            a.num.pop_back();
+        }
     }
-    result.sign = sign != rhs.sign;
-    result.normalize();
-    return *this = result;
+    res.normalize();
+    res.sign = new_sign;
+    return *this = res;
 }
-
 big_integer& big_integer::operator%=(big_integer const& rhs) {
     big_integer res = *this - (*this / rhs) * rhs;
     res.normalize();
@@ -176,9 +204,9 @@ big_integer& big_integer::operator&=(big_integer const& rhs) {
 
 big_integer& big_integer::operator|=(big_integer const& rhs) {
     for (size_t i = 0; i < std::max(rhs.num.size(), num.size()); i++) {
-        unsigned int a = (i < num.size() ? (sign ? ~num[i] + 1 : num[i]): 0);
-        unsigned int b = (i < rhs.num.size() ? (rhs.sign ? ~rhs.num[i] + 1 : rhs.num[i]): 0);
-        unsigned int c = a | b;
+        uint32_t a = (i < num.size() ? (sign ? ~num[i] + 1 : num[i]): 0);
+        uint32_t b = (i < rhs.num.size() ? (rhs.sign ? ~rhs.num[i] + 1 : rhs.num[i]): 0);
+        uint32_t c = a | b;
         if (sign != rhs.sign) {
             c = ~c + 1;
         }
@@ -195,9 +223,9 @@ big_integer& big_integer::operator|=(big_integer const& rhs) {
 
 big_integer& big_integer::operator^=(big_integer const& rhs) {
     for (size_t i = 0; i < std::max(rhs.num.size(), num.size()); i++) {
-        unsigned int a = (i < num.size() ? (sign ? ~num[i] + 1 : num[i]): 0);
-        unsigned int b = (i < rhs.num.size() ? (rhs.sign ? ~rhs.num[i] + 1 : rhs.num[i]): 0);
-        unsigned int c = a ^ b;
+        uint32_t a = (i < num.size() ? (sign ? ~num[i] + 1 : num[i]): 0);
+        uint32_t b = (i < rhs.num.size() ? (rhs.sign ? ~rhs.num[i] + 1 : rhs.num[i]): 0);
+        uint32_t c = a ^ b;
         if (sign != rhs.sign) {
             c = ~c + 1;
         }
@@ -219,29 +247,29 @@ big_integer& big_integer::operator<<=(int rhs) {
     big_integer res = *this;
     res.sign = sign;
     sign = false;
-    for (int i = 0; i <= rhs / 31 + 1; i++) {
+    for (size_t i = 0; i <= rhs / (SHIFT - 1) + 1; i++) {
         res.num.push_back(0);
     }
-    for (int i = 0; i < (int)res.num.size(); i++) {
-        int left = i * 32 - rhs;
-        int right = (i + 1) * 32 - 1 - rhs;
-        int numLeft = left / 32;
-        int numRight = right / 32;
-        unsigned int cnt = (32 - rhs % 32) % 32;
-        unsigned int a, b;
-        if (left < 0 || numLeft >= (int)num.size()) {
+    for (size_t i = 0; i < res.num.size(); i++) {
+        ptrdiff_t left = i * SHIFT - rhs;
+        ptrdiff_t right = (i + 1) * SHIFT - 1 - rhs;
+        ptrdiff_t numLeft = left / SHIFT;
+        ptrdiff_t numRight = right / SHIFT;
+        uint32_t cnt = (SHIFT - rhs % SHIFT) % SHIFT;
+        uint32_t a, b;
+        if (left < 0 || numLeft >= (ptrdiff_t)num.size()) {
             a = 0;
         } else {
             a = (sign ? ~num[numLeft] + 1 : num[numLeft]);
         }
-        if (right < 0 || numRight >= (int)num.size()) {
+        if (right < 0 || numRight >= (ptrdiff_t)num.size()) {
             b = 0;
         } else {
             b = (sign ? ~num[numRight] + 1 : num[numRight]);
         }
         a >>= cnt;
         b &= (1U << cnt) - 1U;
-        res.num[i] = (b << (32 - cnt)) + a;
+        res.num[i] = (cnt ? (b << (SHIFT - cnt)) : 0) + a;
         if (sign) {
             res.num[i] = ~res.num[i] + 1;
         }
@@ -257,26 +285,26 @@ big_integer& big_integer::operator>>=(int rhs) {
     big_integer res = *this;
     res.sign = sign;
     sign = false;
-    for (int i = 0; i < (int)res.num.size(); i++) {
-        int left = i * 32 + rhs;
-        int right = (i + 1) * 32 - 1 + rhs;
-        int numLeft = left / 32;
-        int numRight = right / 32;
-        unsigned int cnt = rhs % 32;
-        unsigned int a, b;
-        if (numLeft >= (int)num.size()) {
+    for (size_t i = 0; i < res.num.size(); i++) {
+        ptrdiff_t left = i * SHIFT + rhs;
+        ptrdiff_t right = (i + 1) * SHIFT - 1 + rhs;
+        ptrdiff_t numLeft = left / SHIFT;
+        ptrdiff_t numRight = right / SHIFT;
+        uint32_t cnt = rhs % SHIFT;
+        uint32_t a, b;
+        if (numLeft >= (ptrdiff_t) num.size()) {
             a = sign * UINT32_MAX;
         } else {
             a = (sign ? ~num[numLeft] + 1 : num[numLeft]);
         }
-        if (numRight >= (int)num.size()) {
+        if (numRight >= (ptrdiff_t)num.size()) {
             b = sign * UINT32_MAX;
         } else {
             b = (sign ? ~num[numRight] + 1 : num[numRight]);
         }
         a >>= cnt;
         b &= (1U << cnt) - 1U;
-        res.num[i] = (b << (32 - cnt)) + a;
+        res.num[i] = (b << (SHIFT - cnt)) + a;
         if (sign) {
             res.num[i] = ~res.num[i] + 1;
         }
@@ -304,7 +332,7 @@ big_integer big_integer::operator~() const {
 }
 
 big_integer& big_integer::operator++() {
-    return *(this + 1);
+    return *this += 1;
 }
 
 big_integer big_integer::operator++(int) {
@@ -314,7 +342,7 @@ big_integer big_integer::operator++(int) {
 }
 
 big_integer& big_integer::operator--() {
-    return *(this - 1);
+    return *this -= 1;
 }
 
 big_integer big_integer::operator--(int) {

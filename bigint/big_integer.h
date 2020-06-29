@@ -5,9 +5,13 @@
 #include <gmp.h>
 #include <iosfwd>
 #include <vector>
+#include <cstdint>
 
 struct big_integer
 {
+    std::vector<unsigned int> num;
+    bool sign;
+
     big_integer();
     big_integer(big_integer const& other);
     big_integer(int a);
@@ -50,10 +54,7 @@ struct big_integer
     friend std::string to_string(big_integer const& a);
 
 private:
-    std::vector<unsigned int> num;
-    bool sign;
     void normalize();
-
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
