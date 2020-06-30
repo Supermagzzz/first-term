@@ -148,7 +148,7 @@ uint32_t trial(uint128_t a, uint128_t b, uint128_t c, uint128_t d, uint128_t e) 
 }
 
 bool smaller(big_integer &a, big_integer &b, size_t k, size_t m) {
-    for (size_t i = k - 1; i >= 0; i--) {
+    for (std::ptrdiff_t i = k - 1; i >= 0; i--) {
         if (a.num[i] != (m - k + i < b.num.size() ? b.num[m - k + i] : 0)) {
             return a.num[i] < (m - k + i < b.num.size() ? b.num[m - k + i] : 0);
         }
