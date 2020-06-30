@@ -55,18 +55,18 @@ struct vector
 
 private:
     static T* safe_copy(const T*, size_t, size_t);
-    void new_size(size_t);
+    static void clear_buffer(const T*, size_t, size_t);
+    void new_capacity(size_t);
     T* data_;
     size_t size_;
     size_t capacity_;
 };
 
 template <typename T>
-vector<T>::vector() {
-    size_ = 0;
-    capacity_ = 0;
-    data_ = nullptr;
-}
+vector<T>::vector() :
+    data_(nullptr),
+    size_(0),
+    capacity_(0) {}
 
 template <typename T>
 vector<T>::vector(vector const& other) {
@@ -185,17 +185,22 @@ size_t vector<T>::capacity() const {
 }
 
 template <typename T>
-T* vector<T>::safe_copy(const T* data, size_t cnt, size_t n) {
+void vector<T>::clear_buffer(const T* data, size_t count, size_t index) {
+    while (count--) {
+        data[--index].~T();
+    }
+}
+
+template <typename T>
+T* vector<T>::safe_copy(const T* data, size_t last_size, size_t new_size) {
     size_t i;
-    T* buffer = static_cast<T*>(operator new(n * sizeof(T)));
+    T* buffer = static_cast<T*>(operator new(new_size * sizeof(T)));
     try {
-        for (i = 0; i < cnt; ++i) {
+        for (i = 0; i < last_size; ++i) {
             new(buffer + i) T(data[i]);
         }
     } catch (...) {
-        while (i--) {
-            buffer[i].~T();
-        }
+        clear_buffer(buffer, i, i);
         operator delete(buffer);
         throw;
     }
@@ -203,20 +208,18 @@ T* vector<T>::safe_copy(const T* data, size_t cnt, size_t n) {
 }
 
 template <typename T>
-void vector<T>::new_size(size_t n) {
+void vector<T>::new_capacity(size_t n) {
     T* new_data = safe_copy(data_, size_, n);
-    size_t sz = size_;
-    clear();
+    clear_buffer(data_, size_, size_);
     std::swap(data_, new_data);
     operator delete(new_data);
     capacity_ = n;
-    size_ = sz;
 }
 
 template <typename T>
 void vector<T>::reserve(size_t n) {
     if (capacity_ < n) {
-        new_size(n);
+        new_capacity(n);
     }
 }
 
@@ -227,7 +230,7 @@ void vector<T>::shrink_to_fit() {
             operator delete(data_);
             data_ = nullptr;
         } else {
-            new_size(size_);
+            new_capacity(size_);
         }
     }
     capacity_ = size_;
@@ -235,9 +238,7 @@ void vector<T>::shrink_to_fit() {
 
 template <typename T>
 void vector<T>::clear() {
-    for (std::ptrdiff_t i = size_ - 1; i >= 0; i--) {
-        data_[i].~T();
-    }
+    clear_buffer(data_, size_, size_);
     size_ = 0;
 }
 
@@ -272,7 +273,7 @@ template <typename T>
 typename vector<T>::iterator vector<T>::insert(const_iterator pos, const T & x) {
     size_t j = pos - data_;
     push_back(x);
-    for (size_t i = size() - 1; i != j; i--) {
+    for (size_t i = size_ - 1; i != j; i--) {
         std::swap(data_[i], data_[i - 1]);
     }
     return data_ + j;
@@ -280,15 +281,7 @@ typename vector<T>::iterator vector<T>::insert(const_iterator pos, const T & x) 
 
 template <typename T>
 typename vector<T>::iterator vector<T>::erase(const_iterator pos) {
-#ifdef _GLIBCXX_DEBUG
-    assert(data_ <= pos && pos < data_ + size_);
-#endif
-    std::ptrdiff_t delta = pos - data_;
-    for (size_t i = delta; i + 1 < size_; i++) {
-        std::swap(data_[i], data_[i + 1]);
-    }
-    pop_back();
-    return data_ + delta;
+    return erase(pos, pos + 1);
 }
 
 template <typename T>
@@ -304,9 +297,8 @@ typename vector<T>::iterator vector<T>::erase(const_iterator first, const_iterat
     for (size_t i = j; i + cnt < size_; i++) {
         std::swap(data_[i], data_[i + cnt]);
     }
-    while (cnt--) {
-        pop_back();
-    }
+    clear_buffer(data_, cnt, size_);
+    size_ -= cnt;
     return data_ + j;
 }
 #endif
