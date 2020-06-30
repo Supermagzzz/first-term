@@ -53,7 +53,6 @@ struct big_integer
 
     friend std::string to_string(big_integer const& a);
 
-private:
     void normalize();
 };
 

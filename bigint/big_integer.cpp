@@ -141,6 +141,35 @@ big_integer& big_integer::operator*=(big_integer const& rhs) {
     return *this;
 }
 
+uint32_t trial(uint128_t a, uint128_t b, uint128_t c, uint128_t d, uint128_t e) {
+    uint128_t x = (a << 2 * SHIFT) + (b << SHIFT) + c;
+    uint64_t y = (d << SHIFT) + e;
+    return x / y;
+}
+
+bool smaller(big_integer &a, big_integer &b, size_t k, size_t m) {
+    for (size_t i = k - 1; i >= 0; i--) {
+        if (a.num[i] != (m - k + i < b.num.size() ? b.num[m - k + i] : 0)) {
+            return a.num[i] < (m - k + i < b.num.size() ? b.num[m - k + i] : 0);
+        }
+    }
+    return false;
+}
+
+void difference(big_integer &a, big_integer &b, size_t k, size_t m) {
+    bool carry = false;
+    for (size_t i = 0; i < m; ++i) {
+        int64_t c = (int64_t) a.num[k - m + i] -
+                    (i < b.num.size() ? b.num[i] : 0) -
+                    carry;
+        carry = c < 0;
+        a.num[k - m + i] = c;
+    }
+    if (!a.num.back()) {
+        a.num.pop_back();
+    }
+}
+
 big_integer& big_integer::operator/=(big_integer const& rhs) {
     if (rhs == 0) {
         throw std::invalid_argument("division by zero");
@@ -150,40 +179,24 @@ big_integer& big_integer::operator/=(big_integer const& rhs) {
     bool new_sign = a.sign ^ b.sign;
     a.sign = b.sign = false;
     big_integer res;
+    size_t n = a.num.size() + 1, m = b.num.size() + 1;
     a.num.push_back(0);
-    size_t n = a.num.size(), m = b.num.size() + 1;
     res.num.resize(n - m + 1);
-    for (size_t i = m, j = res.num.size() - 1; i <= n; ++i, --j) {
-        uint128_t x = ((uint128_t) a.num.back() << 2 * SHIFT) +
-                (a.num.size() >= 2 ? ((uint64_t) a.num[a.num.size() - 2] << SHIFT) : 0U) +
-                (a.num.size() >= 3 ? a.num[a.num.size() - 3] : 0U);
-        uint64_t y = ((uint64_t) b.num.back() << SHIFT) +
-                (b.num.size() >= 2 ? b.num[b.num.size() - 2] : 0U);
-        uint32_t cur = x / y;
+    size_t j = res.num.size() - 1;
+    for (size_t i = m; i <= n; i++) {
+        uint32_t cur = trial(
+                a.num.back(),
+                a.num.size() >= 2 ? a.num[a.num.size() - 2] : 0U,
+                a.num.size() >= 3 ? a.num[a.num.size() - 3] : 0U,
+                b.num.back(),
+                b.num.size() >= 2 ? b.num[b.num.size() - 2] : 0U);
         big_integer t = b * cur;
-        bool bad = false;
-        for (size_t i = 1; i <= a.num.size(); i++) {
-            if (a.num[a.num.size() - i] != (m - i < t.num.size() ? t.num[m - i] : 0)) {
-                bad = a.num[a.num.size() - i] < (m - i < t.num.size() ? t.num[m - i] : 0);
-                break;
-            }
-        }
-        if (bad) {
+        if (smaller(a, t, a.num.size(), m)) {
             cur--;
             t -= b;
         }
-        res.num[j] = cur;
-        bool carry = false;
-        for (size_t i = 0; i < m; ++i) {
-            int64_t c = (int64_t) a.num[a.num.size() - m + i] -
-                        (i < t.num.size() ? t.num[i] : 0) -
-                        carry;
-            carry = c < 0;
-            a.num[a.num.size() - m + i] = c;
-        }
-        if (!a.num.back()) {
-            a.num.pop_back();
-        }
+        res.num[j--] = cur;
+        difference(a, t, a.num.size(), m);
     }
     res.normalize();
     res.sign = new_sign;
