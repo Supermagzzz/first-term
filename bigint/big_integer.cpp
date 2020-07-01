@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <cstdint>
 
-__extension__ typedef unsigned __int128 uint128_t;
-
 static const uint32_t SHIFT = 32;
 static const uint32_t HALF_SHIFT = SHIFT / 2;
 static const uint32_t HALF_BITS = (1ULL << 16ULL) - 1;
@@ -141,9 +139,9 @@ big_integer& big_integer::operator*=(big_integer const& rhs) {
     return *this;
 }
 
-uint32_t trial(uint128_t a, uint128_t b, uint128_t c, uint128_t d, uint128_t e) {
-    uint128_t x = (a << 2 * SHIFT) + (b << SHIFT) + c;
-    uint64_t y = (d << SHIFT) + e;
+uint32_t trial(uint64_t a, uint64_t b, uint64_t d) {
+    uint64_t x = (a << SHIFT) + b;
+    uint64_t y = d;
     return x / y;
 }
 
@@ -176,6 +174,9 @@ big_integer& big_integer::operator/=(big_integer const& rhs) {
     }
     big_integer a = *this;
     big_integer b = rhs;
+    uint32_t f = (1ULL << SHIFT) / (b.num.back() + 1);
+    a *= f;
+    b *= f;
     bool new_sign = a.sign ^ b.sign;
     a.sign = b.sign = false;
     big_integer res;
@@ -187,11 +188,9 @@ big_integer& big_integer::operator/=(big_integer const& rhs) {
         uint32_t cur = trial(
                 a.num.back(),
                 a.num.size() >= 2 ? a.num[a.num.size() - 2] : 0U,
-                a.num.size() >= 3 ? a.num[a.num.size() - 3] : 0U,
-                b.num.back(),
-                b.num.size() >= 2 ? b.num[b.num.size() - 2] : 0U);
+                b.num.back());
         big_integer t = b * cur;
-        if (smaller(a, t, a.num.size(), m)) {
+        while (smaller(a, t, a.num.size(), m)) {
             cur--;
             t -= b;
         }
