@@ -13,7 +13,7 @@ add_executable(big_integer_testing
                gtest/gtest.h
                gtest/gtest_main.cc 
                big_integer_gmp.cpp 
-               big_integer_gmp.h)
+               big_integer_gmp.h shared_vector.cpp shared_vector.h shared_vector_small_object.cpp shared_vector_small_object.h)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
