@@ -25,6 +25,7 @@ TEST(correctness, default_ctor) {
 TEST(correctness, ctor_limits) {
   big_integer a = std::numeric_limits<int>::min();
   big_integer b = std::numeric_limits<int>::max();
+  big_integer c = a + b;
   EXPECT_EQ(-1, a + b);
 }
 
@@ -113,6 +114,7 @@ TEST(correctness, add) {
 TEST(correctness, add_signed) {
   big_integer a = 5;
   big_integer b = -20;
+  big_integer c = a + b;
   EXPECT_TRUE(a + b == -15);
 
   a += b;
