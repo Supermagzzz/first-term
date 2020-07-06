@@ -11,7 +11,7 @@ static const uint32_t HALF_SHIFT = SHIFT / 2;
 static const uint32_t HALF_BITS = (1ULL << 16ULL) - 1;
 
 big_integer::big_integer()
-    : num({0})
+    : num()
     , sign(false) {}
 
 big_integer::big_integer(big_integer const& other)
@@ -24,11 +24,15 @@ big_integer::~big_integer() = default;
 
 big_integer::big_integer(int a)
     : num({static_cast<uint32_t>(std::abs(1ll * a))})
-    , sign(a < 0) {}
+    , sign(a < 0) {
+    normalize();
+}
 
 big_integer::big_integer(uint32_t a)
     : num({a})
-    , sign(false) {}
+    , sign(false) {
+    normalize();
+}
 
 int addInt(uint32_t &a, uint32_t b) {
     uint32_t c = a;
@@ -43,10 +47,10 @@ int subInt(uint32_t &a, uint32_t b) {
 }
 
 void big_integer::normalize() {
-    while ((int)num.size() > 1 && num.back() == 0) {
+    while (num.size() != 0 && num.back() == 0) {
         num.pop_back();
     }
-    if (num.back() == 0) {
+    if (num.size() == 0) {
         sign = false;
     }
 }

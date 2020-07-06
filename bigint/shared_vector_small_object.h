@@ -5,7 +5,7 @@
 
 class shared_vector_small_object {
 private:
-    static const size_t SIZE = sizeof(shared_vector*) / sizeof(uint32_t);
+    static constexpr size_t SIZE = sizeof(shared_vector*) / sizeof(uint32_t);
     bool is_small;
     size_t small_size;
     union {
@@ -13,6 +13,8 @@ private:
         shared_vector *num;
     };
     void delete_num();
+    void check_counter();
+    void to_big();
 
 public:
     shared_vector_small_object();
@@ -25,14 +27,11 @@ public:
     void pop_back();
     void push_back(uint32_t);
     void resize(size_t);
-    uint32_t const& operator [] (size_t x) const;
-    uint32_t& operator [] (size_t x);
-    bool operator == (shared_vector_small_object const &b) const;
-    void check_counter();
-    void to_big();
-    void to_small();
+    uint32_t const& operator[](size_t x) const;
+    uint32_t& operator[](size_t x);
+    friend bool operator==(shared_vector_small_object const &a,
+            shared_vector_small_object const &b);
     shared_vector_small_object& operator=(shared_vector_small_object const& other);
-    std::vector<uint32_t> get_vector() const;
 };
 
 
