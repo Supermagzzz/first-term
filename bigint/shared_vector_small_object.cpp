@@ -6,27 +6,24 @@
 
 shared_vector_small_object::shared_vector_small_object()
     : is_small(true)
-    , small_size(1) {
-    std::fill(small, small + SIZE, 0);
+    , small_size(0) {
 }
 
 shared_vector_small_object::shared_vector_small_object(std::vector<uint32_t> x){
-    if (x.size() <= 2) {
+    if (x.size() <= SIZE) {
         is_small = true;
         small_size = x.size();
-        std::fill(small, small + SIZE, 0);
         copy_n(x.begin(), x.size(), small);
     } else {
         is_small = false;
         small_size = 0;
-        num = new shared_vector(x);
+        num = new shared_vector(std::move(x));
     }
 }
 
 shared_vector_small_object::shared_vector_small_object(shared_vector_small_object const& other) {
     is_small = other.is_small;
     if (other.is_small) {
-        std::fill(small, small + SIZE, 0);
         std::copy_n(other.small, SIZE, small);
         small_size = other.small_size;
     } else {
@@ -86,8 +83,7 @@ void shared_vector_small_object::push_back(uint32_t x) {
 }
 
 void shared_vector_small_object::resize(size_t x) {
-    if (x <= SIZE) {
-        to_small();
+    if (is_small && x <= SIZE) {
         small_size = x;
     } else {
         to_big();
@@ -113,22 +109,20 @@ uint32_t& shared_vector_small_object::operator[](size_t x) {
     }
 }
 
-std::vector<uint32_t> shared_vector_small_object::get_vector() const {
-    if (is_small) {
-        std::vector<uint32_t> data(small_size);
-        copy_n(small, small_size, data.begin());
-        return data;
-    } else {
-        return num->data;
+bool operator==(shared_vector_small_object const &a,
+        shared_vector_small_object const &b) {
+    if (a.size() == b.size()) {
+        if (a.is_small && b.is_small) {
+            return std::equal(a.small, a.small + a.small_size, b.small);
+        } else if (a.is_small && !b.is_small) {
+            return std::equal(a.small, a.small + a.small_size, b.num->data.begin());
+        } else if (!a.is_small && b.is_small) {
+            return b == a;
+        } else {
+            return a.num->data == b.num->data;
+        }
     }
-}
-
-bool shared_vector_small_object::operator == (shared_vector_small_object const &b) const {
-    return get_vector() == b.get_vector();
-}
-
-bool operator == (shared_vector_small_object const &a, shared_vector_small_object const &b) {
-    return a.operator==(b);
+    return false;
 }
 
 void shared_vector_small_object::check_counter() {
@@ -138,8 +132,8 @@ void shared_vector_small_object::check_counter() {
     }
 }
 
-shared_vector_small_object& shared_vector_small_object::operator=
-        (shared_vector_small_object const& other) {
+shared_vector_small_object& shared_vector_small_object::operator=(
+        shared_vector_small_object const& other) {
     if (this != &other) {
         if (!is_small) {
             delete_num();
@@ -149,7 +143,8 @@ shared_vector_small_object& shared_vector_small_object::operator=
         if (is_small) {
             std::copy_n(other.small, SIZE, small);
         } else {
-            num = new shared_vector(other.num->data);
+            num = other.num;
+            num->counter++;
         }
     }
     return *this;
@@ -157,23 +152,9 @@ shared_vector_small_object& shared_vector_small_object::operator=
 
 void shared_vector_small_object::to_big() {
     if (is_small) {
-        std::vector<uint32_t> new_num(small_size);
-        copy_n(small, small_size, new_num.begin());
-        num = new shared_vector(new_num);
+        num = new shared_vector(std::vector<uint32_t>(small, small + small_size));
         is_small = false;
         small_size = 0;
-    }
-}
-
-void shared_vector_small_object::to_small() {
-    if (!is_small && size() <= SIZE) {
-        std::vector<uint32_t> data = num->data;
-        size_t size = num->size();
-        delete_num();
-        std::fill(small, small + SIZE, 0);
-        std::copy_n(data.begin(), size, small);
-        small_size = size;
-        is_small = true;
     }
 }
 

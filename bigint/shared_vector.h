@@ -15,9 +15,9 @@ public:
     void pop_back();
     void push_back(uint32_t);
     void resize(size_t);
-    uint32_t const& operator [] (size_t x) const;
-    uint32_t& operator [] (size_t x);
-    friend bool operator== (shared_vector const& a, shared_vector const& b) {
+    uint32_t const& operator[](size_t x) const;
+    uint32_t& operator[](size_t x);
+    friend bool operator==(shared_vector const& a, shared_vector const& b) {
         return a.data == b.data;
     }
 
