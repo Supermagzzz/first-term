@@ -4,13 +4,20 @@
 #include <cstddef>
 #include <gmp.h>
 #include <iosfwd>
+#include <vector>
+#include <cstdint>
+#include "shared_vector_small_object.h"
 
 struct big_integer
 {
+    shared_vector_small_object num;
+    bool sign;
+
     big_integer();
     big_integer(big_integer const& other);
     big_integer(int a);
-    explicit big_integer(std::string const& str);
+    big_integer(unsigned int a);
+    big_integer(std::string const& str);
     ~big_integer();
 
     big_integer& operator=(big_integer const& other);
@@ -47,8 +54,7 @@ struct big_integer
 
     friend std::string to_string(big_integer const& a);
 
-private:
-    mpz_t mpz;
+    void normalize();
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
