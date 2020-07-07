@@ -76,7 +76,7 @@ std::pair<uint32_t, uint32_t> mul(uint32_t n, uint32_t m) {
     return std::make_pair(top, bot);
 }
 
-big_integer::big_integer(std::string const& str) {
+big_integer::big_integer(std::string const& str) : num({0}) {
     big_integer res = 0;
     for (size_t i = str[0] == '-'; i < str.size(); i++) {
         res *= 10;
