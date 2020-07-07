@@ -17,7 +17,6 @@ private:
     void to_big();
 
 public:
-    shared_vector_small_object();
     explicit shared_vector_small_object(std::vector<uint32_t>);
     shared_vector_small_object(shared_vector_small_object const&);
     ~shared_vector_small_object();

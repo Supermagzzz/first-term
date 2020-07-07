@@ -4,12 +4,6 @@
 #include <algorithm>
 #include <vector>
 
-shared_vector_small_object::shared_vector_small_object()
-    : is_small(true)
-    , small_size(1) {
-    small[0] = 1;
-}
-
 shared_vector_small_object::shared_vector_small_object(std::vector<uint32_t> x){
     if (x.size() <= SIZE) {
         is_small = true;
@@ -86,6 +80,7 @@ void shared_vector_small_object::push_back(uint32_t x) {
 void shared_vector_small_object::resize(size_t x) {
     if (is_small && x <= SIZE) {
         small_size = x;
+        std::fill(small + small_size, small + x, 0);
     } else {
         to_big();
         check_counter();
@@ -110,8 +105,7 @@ uint32_t& shared_vector_small_object::operator[](size_t x) {
     }
 }
 
-bool operator==(shared_vector_small_object const &a,
-        shared_vector_small_object const &b) {
+bool operator==(shared_vector_small_object const &a, shared_vector_small_object const &b) {
     if (a.size() == b.size()) {
         if (a.is_small && b.is_small) {
             return std::equal(a.small, a.small + a.small_size, b.small);
@@ -133,8 +127,7 @@ void shared_vector_small_object::check_counter() {
     }
 }
 
-shared_vector_small_object& shared_vector_small_object::operator=(
-        shared_vector_small_object const& other) {
+shared_vector_small_object& shared_vector_small_object::operator=(shared_vector_small_object const& other) {
     if (this != &other) {
         if (!is_small) {
             delete_num();
