@@ -80,7 +80,9 @@ void shared_vector_small_object::push_back(uint32_t x) {
 void shared_vector_small_object::resize(size_t x) {
     if (is_small && x <= SIZE) {
         small_size = x;
-        std::fill(small + small_size, small + x, 0);
+        if (small_size < x) {
+            std::fill(small + small_size, small + x, 0);
+        }
     } else {
         to_big();
         check_counter();
