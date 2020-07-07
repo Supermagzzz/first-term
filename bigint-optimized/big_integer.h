@@ -28,9 +28,9 @@ struct big_integer
     big_integer& operator/=(big_integer const& rhs);
     big_integer& operator%=(big_integer const& rhs);
 
-    big_integer& operator&=(big_integer const& rhs);
-    big_integer& operator|=(big_integer const& rhs);
-    big_integer& operator^=(big_integer const& rhs);
+    big_integer& operator&=(const big_integer& rhs);
+    big_integer& operator|=(const big_integer& rhs);
+    big_integer& operator^=(const big_integer& rhs);
 
     big_integer& operator<<=(int rhs);
     big_integer& operator>>=(int rhs);

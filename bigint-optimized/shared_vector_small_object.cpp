@@ -6,7 +6,8 @@
 
 shared_vector_small_object::shared_vector_small_object()
     : is_small(true)
-    , small_size(0) {
+    , small_size(1) {
+    small[0] = 1;
 }
 
 shared_vector_small_object::shared_vector_small_object(std::vector<uint32_t> x){
