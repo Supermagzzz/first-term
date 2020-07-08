@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <gmp.h>
 #include <iosfwd>
+#include <vector>
 
 struct big_integer
 {
     big_integer();
     big_integer(big_integer const& other);
     big_integer(int a);
+    big_integer(unsigned int a);
     explicit big_integer(std::string const& str);
     ~big_integer();
 
@@ -48,7 +50,10 @@ struct big_integer
     friend std::string to_string(big_integer const& a);
 
 private:
-    mpz_t mpz;
+    std::vector<unsigned int> num;
+    bool sign;
+    void normalize();
+
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
